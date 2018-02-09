@@ -14,7 +14,7 @@
 #define DRIVER_AUTHOR "Nguyen Tien Dat <dat.a3cbq91@gmail.com>"
 #define DRIVER_DESC   "An simple example about character driver"
 #define MEM_SIZE 1024
-#define NUM_STATUS 3
+#define NUM_STATUS 65536
 
 dev_t dev_num = 0;
 static struct class * device_class;
@@ -72,11 +72,11 @@ static ssize_t example_write(struct file *filp, const char __user *user_buf, siz
 
 static void *example_seq_start(struct seq_file *s, loff_t *pos)
 {
-	static unsigned long index = 0;
+	static unsigned long count = 0;
 
-	printk("seq_start: *pos(%u), index(%u)\n", *pos, index);
+	printk("seq_start: *pos(%Ld), count(%lu)\n", *pos, count);
 	if ( *pos == 0 ) {
-		return &index;
+		return &count;
 	} else {
 		*pos = 0;
 		return NULL; //ket thuc qua trinh doc tu /proc file
@@ -85,24 +85,24 @@ static void *example_seq_start(struct seq_file *s, loff_t *pos)
 
 static int example_seq_show(struct seq_file *s, void *v)
 {
-	unsigned long *i = (unsigned long *) v;//day la bien index
-	printk("seq_show *v(%u)\n", *i);
-	seq_printf(s, "status %u: %u\n", status_module[*i].key, status_module[*i].value);
+	unsigned long *c = (unsigned long *) v;//day la bien count
+	for(*c = 0; *c < NUM_STATUS; (*c)++)
+		seq_printf(s, "status %u: %u\n", status_module[*c].key, status_module[*c].value);
 
+	printk("seq_show *v(%lu)\n", *c);
 	return 0;
 }
 
 static void *example_seq_next(struct seq_file *s, void *v, loff_t *pos)
 {
-	unsigned long *i = (unsigned long *)v;//v bien index trong example_seq_start
-	++(*i); //chuyen toi phan tu tiep theo
-	if(*i < NUM_STATUS) {
-		printk("seq_next *v(%u)\n", *i);
+	unsigned long *c = (unsigned long *)v;//v bien count trong example_seq_start
+	if(*c < NUM_STATUS) {
+		printk("seq_next *v(%lu)\n", *c);
 		return v;
 	}
 
 	*pos = 1;
-	printk("seq_next set *pos(%u). Go to seq_stop\n", *pos);
+	printk("seq_next set *pos(%Lu). Go to seq_stop\n", *pos);
 	return NULL;//chuyen toi seq_stop
 }
 
