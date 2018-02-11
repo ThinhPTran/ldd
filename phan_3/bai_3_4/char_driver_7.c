@@ -72,36 +72,37 @@ static ssize_t example_write(struct file *filp, const char __user *user_buf, siz
 
 static void *example_seq_start(struct seq_file *s, loff_t *pos)
 {
-	static unsigned long count = 0;
-
-	printk("seq_start: *pos(%Ld), count(%lu)\n", *pos, count);
-	if ( *pos == 0 ) {
-		return &count;
+	if (*pos < NUM_STATUS) {
+		printk("seq_start: *pos(%Ld)\n", *pos);
+		return status_module + *pos;
 	} else {
-		*pos = 0;
-		return NULL; //ket thuc qua trinh doc tu /proc file
+		printk("seq_start: finish\n");
+		return NULL;
 	}
 }
 
 static int example_seq_show(struct seq_file *s, void *v)
 {
-	unsigned long *c = (unsigned long *) v;//day la bien count
-	for(*c = 0; *c < NUM_STATUS; (*c)++)
-		seq_printf(s, "status %u: %u\n", status_module[*c].key, status_module[*c].value);
+	status_t *c = (status_t *) v;//day la bien count
+	seq_printf(s, "status %u: %u\n", c->key, c->value);
 
-	printk("seq_show *v(%lu)\n", *c);
+	printk("seq_show %u\n", c->key);
 	return 0;
 }
 
 static void *example_seq_next(struct seq_file *s, void *v, loff_t *pos)
 {
-	unsigned long *c = (unsigned long *)v;//v bien count trong example_seq_start
-	if(*c < NUM_STATUS) {
-		printk("seq_next *v(%lu)\n", *c);
-		return v;
+	status_t *c = (status_t *)v;//v bien count trong example_seq_start
+
+	/* chuyen toi phan tu tiep theo */
+	(*pos)++; //cap nhat vi tri cua phan tu tiep theo trong chuoi
+	c++; //tro toi phan tu tiep theo trong chuoi
+
+	if(*pos < NUM_STATUS) {
+		printk("seq_next *pos(%Lu)\n", *pos);
+		return c;
 	}
 
-	*pos = 1;
 	printk("seq_next set *pos(%Lu). Go to seq_stop\n", *pos);
 	return NULL;//chuyen toi seq_stop
 }
