@@ -8,6 +8,8 @@
 #include<linux/cdev.h> /* thu vien cho cau truc cdev */
 #include<linux/slab.h> /* thu vien chua ham kmalloc */
 #include<linux/uaccess.h> /* thu vien chua cac ham trao doi du lieu giua user va kernel */
+#include<linux/semaphore.h> /* thu vien chua cac ham thao tac voi semaphore */
+
 
 #define DRIVER_AUTHOR "Nguyen Tien Dat <dat.a3cbq91@gmail.com>"
 #define DRIVER_DESC   "A simple example about character driver"
@@ -18,6 +20,7 @@ static struct class * device_class;
 static struct cdev *example_cdev;
 uint8_t *kernel_buffer;
 unsigned open_cnt = 0;
+struct semaphore sem;
 
 static int example_open(struct inode *inode, struct file *filp);
 static int example_release(struct inode *inode, struct file *filp);
@@ -37,12 +40,16 @@ static int example_open(struct inode *inode, struct file *filp)
 {
 	open_cnt++;
 	printk("Handle opened event %u times\n", open_cnt);
+
+	down_interruptible(&sem);
 	return 0;
 }
 
 static int example_release(struct inode *inode, struct file *filp)
 {
         printk("Handle closed event %u times\n", open_cnt);
+
+	up(&sem);
         return 0;
 }
  
@@ -78,6 +85,7 @@ static int __init char_driver_init(void)
 	cdev_init(example_cdev, &fops);
 	cdev_add(example_cdev, dev_num, 1);
 
+	sema_init(&sem, 1);//tham so thu hai bang 1: tai 1 thoi diem, chi co 1 tien trinh duoc phep mo device file
 	return 0;
 }
 
