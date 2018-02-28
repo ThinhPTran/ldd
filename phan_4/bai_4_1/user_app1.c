@@ -17,7 +17,6 @@ int main()
         }
  
 	write(fd, write_buf, strlen(write_buf)+1);
-	sleep(5);
 	read(fd, read_buf, 1024);
 	printf("tien trinh 1 doc tu kernel buffer cua char_driver: %s", read_buf);
 	close(fd);
