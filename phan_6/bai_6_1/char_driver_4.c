@@ -8,6 +8,8 @@
 #include<linux/cdev.h> /* thu vien cho cau truc cdev */
 #include<linux/slab.h> /* thu vien chua ham kmalloc */
 #include<linux/uaccess.h> /* thu vien chua cac ham trao doi du lieu giua user va kernel */
+#include<linux/time.h> /* thu vien chua cac ham thao tac voi wall time */
+#include<linux/jiffies.h> /* thu vien chua ham thao tac voi system uptime */
 
 #define DRIVER_AUTHOR "Nguyen Tien Dat <dat.a3cbq91@gmail.com>"
 #define DRIVER_DESC   "A simple example about character driver"
@@ -18,6 +20,7 @@ static struct class * device_class;
 static struct cdev *example_cdev;
 uint8_t *kernel_buffer;
 unsigned open_cnt = 0;
+unsigned long js, je;
 
 static int example_open(struct inode *inode, struct file *filp);
 static int example_release(struct inode *inode, struct file *filp);
@@ -35,6 +38,7 @@ static struct file_operations fops =
  
 static int example_open(struct inode *inode, struct file *filp)
 {
+	js = jiffies;
 	open_cnt++;
 	printk("Handle opened event %u times\n", open_cnt);
 	return 0;
@@ -42,20 +46,27 @@ static int example_open(struct inode *inode, struct file *filp)
 
 static int example_release(struct inode *inode, struct file *filp)
 {
-        printk("Handle closed event %u times\n", open_cnt);
-        return 0;
+	struct timeval tv;
+	printk("Handle closed event %u times\n", open_cnt);
+	je = jiffies;
+	jiffies_to_timeval(je-js, &tv);
+	printk("the driver has been used in %ld.%ld s\n", tv.tv_sec, tv.tv_usec/1000);
+	return 0;
 }
  
 static ssize_t example_read(struct file *filp, char __user *user_buf, size_t len, loff_t *off)
 {
+	struct timespec kts = current_kernel_time();
 	copy_to_user(user_buf, kernel_buffer, MEM_SIZE);
-	printk("Handle read event %u times\n", open_cnt);
+	printk("Handle read event %u times at %ld.%ld from 1 Jan 1970\n", open_cnt, kts.tv_sec, kts.tv_nsec/1000000);
 	return MEM_SIZE;
 }
 static ssize_t example_write(struct file *filp, const char __user *user_buf, size_t len, loff_t *off)
 {
+	struct timeval ktv;
+	do_gettimeofday(&ktv);
 	copy_from_user(kernel_buffer, user_buf, len);
-	printk("Handle write event %u times\n", open_cnt);
+	printk("Handle write event %u times at %ld.%ld from 1 Jan 1970\n", open_cnt, ktv.tv_sec, ktv.tv_usec/1000);
 	return len;
 }
  
