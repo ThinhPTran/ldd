@@ -75,11 +75,13 @@ void reset_statistic() {
 int main()
 {
 	control_char_device(DISABLE);//the command will make disable data transfering
-	if(transfer_data() < 0) printf("no data transfering\n");//expect no data transfer
+	if(transfer_data() < 0) printf("transfering data with kernel module has been disable\n");
 	read_status_char_device();
-	control_char_device(ENABLE);//the command will make enable data transfering
-	if(transfer_data() < 0) printf("no data transfering\n");//expect have data transfer
+
+	control_char_device(ENABLE);//enable transfering data again
+	if(transfer_data() < 0) printf("a problem have occurred while transfering data with kernel module\n");//expect have data transfer
 	read_status_char_device();
+
 	reset_statistic();
 	return 0;
 }
