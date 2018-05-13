@@ -8,6 +8,8 @@
 #include<linux/cdev.h> /* thu vien cho cau truc cdev */
 #include<linux/slab.h> /* thu vien chua ham kmalloc */
 #include<linux/uaccess.h> /* thu vien chua cac ham trao doi du lieu giua user va kernel */
+#include<linux/sched.h> /* thu vien chua cac ham phuc vu long delay */
+#include<linux/delay.h> /* thu vien chua cac ham phuc vu short delay */
 
 #define DRIVER_AUTHOR "Nguyen Tien Dat <dat.a3cbq91@gmail.com>"
 #define DRIVER_DESC   "A simple example about character driver"
@@ -50,12 +52,23 @@ static ssize_t example_read(struct file *filp, char __user *user_buf, size_t len
 {
 	copy_to_user(user_buf, kernel_buffer, MEM_SIZE);
 	printk("Handle read event %u times\n", open_cnt);
+
+	set_current_state(TASK_UNINTERRUPTIBLE);
+	printk("start to sleep 10s\n");
+	schedule_timeout(10*HZ);
+	printk("stop sleeping\n");
+
 	return MEM_SIZE;
 }
 static ssize_t example_write(struct file *filp, const char __user *user_buf, size_t len, loff_t *off)
 {
 	copy_from_user(kernel_buffer, user_buf, len);
 	printk("Handle write event %u times\n", open_cnt);
+
+	printk("start to sleep 10s\n");
+	ssleep(10);
+	printk("stop sleeping\n");
+
 	return len;
 }
  
