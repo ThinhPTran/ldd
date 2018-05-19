@@ -8,16 +8,25 @@
 #include<linux/cdev.h> /* thu vien cho cau truc cdev */
 #include<linux/slab.h> /* thu vien chua ham kmalloc */
 #include<linux/uaccess.h> /* thu vien chua cac ham trao doi du lieu giua user va kernel */
+#include<linux/timer.h> /* thu vien chua cac ham thao tac voi kernel timer */
 
 #define DRIVER_AUTHOR "Nguyen Tien Dat <dat.a3cbq91@gmail.com>"
 #define DRIVER_DESC   "A simple example about character driver"
 #define MEM_SIZE 1024
+
+typedef struct operator {
+	int a;
+	int b;
+} operator_t;
 
 dev_t dev_num = 0;
 static struct class * device_class;
 static struct cdev *example_cdev;
 uint8_t *kernel_buffer;
 unsigned open_cnt = 0;
+/* khai bao timer */
+struct timer_list funny_timer;
+operator_t funny_data;
 
 static int example_open(struct inode *inode, struct file *filp);
 static int example_release(struct inode *inode, struct file *filp);
@@ -58,7 +67,13 @@ static ssize_t example_write(struct file *filp, const char __user *user_buf, siz
 	printk("Handle write event %u times\n", open_cnt);
 	return len;
 }
- 
+
+static void funny_function(unsigned long data)
+{
+	operator_t *pdata = (operator_t*)data;
+	if(pdata)
+		printk("function for kernel timer: %d + %d = %d\n", pdata->a, pdata->b, pdata->a + pdata->b);
+}
 
 static int __init char_driver_init(void)
 {
@@ -78,11 +93,24 @@ static int __init char_driver_init(void)
 	cdev_init(example_cdev, &fops);
 	cdev_add(example_cdev, dev_num, 1);
 
+	/* khoi tao timer */
+	funny_data.a = 20;
+	funny_data.b = 10;
+	init_timer(&funny_timer);
+	funny_timer.expires = jiffies + (10 * HZ);
+	funny_timer.function = funny_function;
+	funny_timer.data = (unsigned long)&funny_data;
+	/* kich hoat timer */
+	add_timer(&funny_timer);
+
 	return 0;
 }
 
 void __exit char_driver_exit(void)
 {
+	if(del_timer(&funny_timer))
+		printk("funny timer is active. Deactive it now!!!\n");
+
 	cdev_del(example_cdev);
 	kfree(kernel_buffer);
 	device_destroy(device_class,dev_num);
