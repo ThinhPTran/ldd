@@ -6,7 +6,7 @@
 #include<linux/fs.h> /* thu vien nay chua cac ham cap phat/giai phong device number */
 #include<linux/device.h> /* thu vien nay chua cac ham phuc vu tao device file */
 #include<linux/cdev.h> /* thu vien cho cau truc cdev */
-#include<linux/slab.h> /* thu vien chua ham kmalloc */
+#include<linux/gfp.h> /* thu vien chua ham get_zeroed_page */
 #include<linux/uaccess.h> /* thu vien chua cac ham trao doi du lieu giua user va kernel */
 
 #define DRIVER_AUTHOR "Nguyen Tien Dat <dat.a3cbq91@gmail.com>"
