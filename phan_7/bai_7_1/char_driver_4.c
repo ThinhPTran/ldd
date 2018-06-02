@@ -11,11 +11,11 @@
 
 #define DRIVER_AUTHOR "Nguyen Tien Dat <dat.a3cbq91@gmail.com>"
 #define DRIVER_DESC   "A simple example about character driver"
-#define MEM_SIZE 1024
 
 dev_t dev_num = 0;
 static struct class * device_class;
 static struct cdev *example_cdev;
+unsigned long page;
 uint8_t *kernel_buffer;
 unsigned open_cnt = 0;
 
@@ -48,9 +48,9 @@ static int example_release(struct inode *inode, struct file *filp)
  
 static ssize_t example_read(struct file *filp, char __user *user_buf, size_t len, loff_t *off)
 {
-	copy_to_user(user_buf, kernel_buffer, MEM_SIZE);
+	copy_to_user(user_buf, kernel_buffer, PAGE_SIZE);
 	printk("Handle read event %u times\n", open_cnt);
-	return MEM_SIZE;
+	return PAGE_SIZE;
 }
 static ssize_t example_write(struct file *filp, const char __user *user_buf, size_t len, loff_t *off)
 {
@@ -71,7 +71,10 @@ static int __init char_driver_init(void)
 	device_create(device_class, NULL, dev_num, NULL,"char_device");
 
 	/* tao kernel buffer */
-	kernel_buffer = kmalloc(MEM_SIZE , GFP_KERNEL);
+	page = get_zeroed_page(GFP_KERNEL);
+	if(!page)
+		return -ENOMEM;
+	kernel_buffer = (uint8_t*)page;
 
 	/* lien ket cac ham entry point cua driver voi device file */
 	example_cdev = cdev_alloc();
@@ -84,7 +87,7 @@ static int __init char_driver_init(void)
 void __exit char_driver_exit(void)
 {
 	cdev_del(example_cdev);
-	kfree(kernel_buffer);
+	free_page(page);
 	device_destroy(device_class,dev_num);
 	class_destroy(device_class);
 	unregister_chrdev_region(dev_num, 1);
