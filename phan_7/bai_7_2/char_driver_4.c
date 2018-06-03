@@ -6,7 +6,7 @@
 #include<linux/fs.h> /* thu vien nay chua cac ham cap phat/giai phong device number */
 #include<linux/device.h> /* thu vien nay chua cac ham phuc vu tao device file */
 #include<linux/cdev.h> /* thu vien cho cau truc cdev */
-#include<linux/slab.h> /* thu vien chua ham kmalloc */
+#include<linux/vmalloc.h> /* thu vien chua ham kmalloc */
 #include<linux/uaccess.h> /* thu vien chua cac ham trao doi du lieu giua user va kernel */
 
 #define DRIVER_AUTHOR "Nguyen Tien Dat <dat.a3cbq91@gmail.com>"
@@ -71,7 +71,7 @@ static int __init char_driver_init(void)
 	device_create(device_class, NULL, dev_num, NULL,"char_device");
 
 	/* tao kernel buffer */
-	kernel_buffer = kmalloc(MEM_SIZE , GFP_KERNEL);
+	kernel_buffer = vmalloc(MEM_SIZE);
 
 	/* lien ket cac ham entry point cua driver voi device file */
 	example_cdev = cdev_alloc();
@@ -84,7 +84,7 @@ static int __init char_driver_init(void)
 void __exit char_driver_exit(void)
 {
 	cdev_del(example_cdev);
-	kfree(kernel_buffer);
+	vfree(kernel_buffer);
 	device_destroy(device_class,dev_num);
 	class_destroy(device_class);
 	unregister_chrdev_region(dev_num, 1);
