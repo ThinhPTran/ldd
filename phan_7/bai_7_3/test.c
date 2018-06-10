@@ -12,6 +12,8 @@ int main()
 {
         int fd;
         char option;
+        int numbytes_rd = 0;
+        int numbytes_wr = 0;
         printf("**************************************************\n");
         printf("*******user application to test char driver*******\n");
  
@@ -35,14 +37,20 @@ int main()
                                 printf("Enter the string to write into driver :");
                                 scanf("  %[^\t\n]s", write_buf);
                                 printf("Data Writing ...");
-                                write(fd, write_buf, strlen(write_buf)+1);
-                                printf("Done!\n");
+                                numbytes_wr = write(fd, write_buf, strlen(write_buf)+1);
+				if (numbytes_wr > 0)
+					printf("Done!\n");
+				else
+					printf("kernel buffer is full, can not write\n");
                                 break;
                         case '2':
                                 printf("Data Reading ...");
-                                read(fd, read_buf, 1024);
-                                printf("Done!\n\n");
-                                printf("Data = %s\n\n", read_buf);
+                                numbytes_rd = read(fd, read_buf, 1024);
+				if (numbytes_rd > 0) {
+	                                printf("Done!\n\n");
+                                        printf("Data = %s\n\n", read_buf);
+				} else
+					printf("kernel buffer is empty, can not read\n");
                                 break;
                         case '3':
                                 close(fd);

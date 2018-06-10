@@ -11,12 +11,20 @@
 
 #define DRIVER_AUTHOR "Nguyen Tien Dat <dat.a3cbq91@gmail.com>"
 #define DRIVER_DESC   "A simple example about character driver"
-#define MEM_SIZE 1024
+#define OBJ_SIZE 1024
+#define MAX_MSG 128
+#define EMPTY 0
+#define FULL 1
+#define NORMAL 2
 
 dev_t dev_num = 0;
 static struct class * device_class;
 static struct cdev *example_cdev;
-uint8_t *kernel_buffer;
+uint8_t *kernel_buffers[MAX_MSG]; //mang cac con tro. moi con tro se tro toi object duoc cap phat boi kmem_cache_alloc
+int status_buffers = EMPTY; //bien luu trang thai cua mang kernel_buffers
+int msgw_index = 0; //ta se ghi du lieu thong qua con tro thu msgw_index cua mang kernel_buffes
+int msgr_index = 0; //ta se doc du lieu thong qua con tro thu msgr_index cua mang kernel_buffers
+struct kmem_cache *buffer_cachep; //con tro, tro toi lookaside cache
 unsigned open_cnt = 0;
 
 static int example_open(struct inode *inode, struct file *filp);
@@ -48,13 +56,39 @@ static int example_release(struct inode *inode, struct file *filp)
  
 static ssize_t example_read(struct file *filp, char __user *user_buf, size_t len, loff_t *off)
 {
-	copy_to_user(user_buf, kernel_buffer, MEM_SIZE);
+	if (status_buffers == EMPTY)
+	{
+		printk("buffers is empty\n");
+		return 0;
+	}
+	if (status_buffers == FULL) status_buffers = NORMAL;
+
+	copy_to_user(user_buf, kernel_buffers[msgr_index], OBJ_SIZE);
+	kmem_cache_free(buffer_cachep, kernel_buffers[msgr_index]);//sau khi doc xong, tra object lai cho lookaside cache
+
+	msgr_index++;
+	if(msgr_index == MAX_MSG) msgr_index = 0;
+	if(msgr_index == msgw_index) status_buffers = EMPTY;
+
 	printk("Handle read event %u times\n", open_cnt);
-	return MEM_SIZE;
+	return OBJ_SIZE;
 }
 static ssize_t example_write(struct file *filp, const char __user *user_buf, size_t len, loff_t *off)
 {
-	copy_from_user(kernel_buffer, user_buf, len);
+	if (status_buffers == FULL)
+	{
+		printk("buffers is full\n");
+		return 0;
+	}
+	if (status_buffers == EMPTY) status_buffers = NORMAL;
+
+	kernel_buffers[msgw_index] = kmem_cache_alloc(buffer_cachep, GFP_KERNEL);//truoc khi ghi, yeu cau lookaside cache cap phat 1 object
+	copy_from_user(kernel_buffers[msgw_index], user_buf, len);
+
+	msgw_index++;
+	if(msgw_index == MAX_MSG) msgw_index = 0;
+	if(msgw_index == msgr_index) status_buffers = FULL;
+
 	printk("Handle write event %u times\n", open_cnt);
 	return len;
 }
@@ -70,8 +104,8 @@ static int __init char_driver_init(void)
 	device_class = class_create(THIS_MODULE, "class_char_dev");
 	device_create(device_class, NULL, dev_num, NULL,"char_device");
 
-	/* tao kernel buffer */
-	kernel_buffer = kmalloc(MEM_SIZE , GFP_KERNEL);
+	/* tao lookaside cache co ten la buffer_cache. moi object la 1 buffer co kich thuoc OBJ_SIZE */
+	buffer_cachep = kmem_cache_create("buffer_cache", OBJ_SIZE, 0, SLAB_PANIC, NULL);
 
 	/* lien ket cac ham entry point cua driver voi device file */
 	example_cdev = cdev_alloc();
@@ -84,7 +118,7 @@ static int __init char_driver_init(void)
 void __exit char_driver_exit(void)
 {
 	cdev_del(example_cdev);
-	kfree(kernel_buffer);
+	kmem_cache_destroy(buffer_cachep);//huy bo lookaside cache
 	device_destroy(device_class,dev_num);
 	class_destroy(device_class);
 	unregister_chrdev_region(dev_num, 1);
