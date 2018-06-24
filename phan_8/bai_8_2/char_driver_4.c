@@ -26,6 +26,14 @@ static int example_open(struct inode *inode, struct file *filp);
 static int example_release(struct inode *inode, struct file *filp);
 static ssize_t example_read(struct file *filp, char __user *user_buf, size_t len, loff_t * off);
 static ssize_t example_write(struct file *filp, const char *user_buf, size_t len, loff_t * off);
+void ex_tasklet_fn(unsigned long);
+
+DECLARE_TASKLET(ex_tasklet, ex_tasklet_fn, 1);
+
+void ex_tasklet_fn(unsigned long arg)
+{
+	printk("Executing work in bottom-half by using tasklet\n");
+}
  
 static struct file_operations fops =
 {
@@ -70,6 +78,9 @@ static ssize_t example_write(struct file *filp, const char __user *user_buf, siz
 static irqreturn_t top_half_isr(int irq, void *dev)
 {
 	int_cnt++;
+	//lap lich cho tasklet de thuc thi cong viec duoi bottom-half
+	tasklet_schedule(&ex_tasklet);
+
 	return IRQ_HANDLED;
 }
 
@@ -102,6 +113,7 @@ static int __init char_driver_init(void)
 
 void __exit char_driver_exit(void)
 {
+	tasklet_kill(&ex_tasklet);
 	free_irq(IRQ_NUMBER, &example_cdev);
 	cdev_del(example_cdev);
 	kfree(kernel_buffer);
