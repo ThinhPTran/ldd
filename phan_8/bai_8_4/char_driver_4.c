@@ -9,6 +9,7 @@
 #include<linux/slab.h> /* thu vien chua ham kmalloc */
 #include<linux/uaccess.h> /* thu vien chua cac ham trao doi du lieu giua user va kernel */
 #include<linux/interrupt.h> /* thu vien chua cac ham dang ky va dieu khien ngat */
+#include<linux/workqueue.h> /* thu vien chua cac ham lam viec voi workqueue */
 
 #define DRIVER_AUTHOR "Nguyen Tien Dat <dat.a3cbq91@gmail.com>"
 #define DRIVER_DESC   "A simple example about character driver"
@@ -26,6 +27,15 @@ static int example_open(struct inode *inode, struct file *filp);
 static int example_release(struct inode *inode, struct file *filp);
 static ssize_t example_read(struct file *filp, char __user *user_buf, size_t len, loff_t * off);
 static ssize_t example_write(struct file *filp, const char *user_buf, size_t len, loff_t * off);
+
+/*Workqueue Function*/
+void ex_bottom_fn(struct work_struct* arg)
+{
+	printk(KERN_INFO "Executing work in bottom-half by using workqueue\n");
+}
+
+//create a work by static method
+DECLARE_WORK(ex_work, ex_bottom_fn);
  
 static struct file_operations fops =
 {
@@ -70,6 +80,7 @@ static ssize_t example_write(struct file *filp, const char __user *user_buf, siz
 static irqreturn_t top_half_isr(int irq, void *dev)
 {
 	int_cnt++;
+	schedule_work(&ex_work);
 	return IRQ_HANDLED;
 }
 
@@ -102,6 +113,7 @@ static int __init char_driver_init(void)
 
 void __exit char_driver_exit(void)
 {
+	cancel_work_sync(&ex_work);
 	free_irq(IRQ_NUMBER, &example_cdev);
 	cdev_del(example_cdev);
 	kfree(kernel_buffer);
