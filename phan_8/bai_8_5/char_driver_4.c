@@ -21,6 +21,7 @@ static struct cdev *example_cdev;
 uint8_t *kernel_buffer;
 unsigned open_cnt = 0;
 volatile uint32_t int_cnt = 0;
+static struct work_struct ex_work;
 
 static int example_open(struct inode *inode, struct file *filp);
 static int example_release(struct inode *inode, struct file *filp);
@@ -66,10 +67,17 @@ static ssize_t example_write(struct file *filp, const char __user *user_buf, siz
 
 	return len;
 }
- 
+
+/*Workqueue Function*/
+void ex_bottom_fn(struct work_struct * arg)
+{
+	printk(KERN_INFO "Executing work in bottom-half by using workqueue\n");
+}
+
 static irqreturn_t top_half_isr(int irq, void *dev)
 {
 	int_cnt++;
+	schedule_work_on(0, &ex_work); //ex_bottom_fn will run on cpu0
 	return IRQ_HANDLED;
 }
 
@@ -97,11 +105,14 @@ static int __init char_driver_init(void)
 		return -EIO;
 	}
 
+	INIT_WORK(&ex_work, ex_bottom_fn);
+
 	return 0;
 }
 
 void __exit char_driver_exit(void)
 {
+	cancel_work_sync(&ex_work);
 	free_irq(IRQ_NUMBER, &example_cdev);
 	cdev_del(example_cdev);
 	kfree(kernel_buffer);
