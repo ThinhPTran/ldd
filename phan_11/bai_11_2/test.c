@@ -3,15 +3,16 @@
 #include <string.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/mman.h>
 #include <fcntl.h>
 #include <unistd.h>
 
-int8_t write_buf[1024];
-int8_t read_buf[1024];
 int main()
 {
 	int fd;
 	char option;
+	char *area; //chua dia chi vung bo nho mapping
+	int size = getpagesize();
 	printf("**************************************************\n");
 	printf("*******user application to test char driver*******\n");
 
@@ -20,6 +21,12 @@ int main()
 		printf("Cannot open device file...\n");
 		return 0;
 	}
+	area = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, 0);
+	if(area == MAP_FAILED) {
+		printf("memory mapping failed\n");
+		exit(1);
+	}
+	close(fd);//sau khi thuc hien memory map co the dong file lai
 
 	while(1) {
 		printf("****Please Enter the Option******\n");
@@ -33,19 +40,14 @@ int main()
 		switch(option) {
 			case '1':
 				printf("Enter the string to write into driver :");
-				scanf("  %[^\t\n]s", write_buf);
-				printf("Data Writing ...");
-				write(fd, write_buf, strlen(write_buf)+1);
+				scanf("  %[^\t\n]s", area); //ghi vao vung memory map
 				printf("Done!\n");
 				break;
 			case '2':
 				printf("Data Reading ...");
-				read(fd, read_buf, 1024);
-				printf("Done!\n\n");
-				printf("Data = %s\n\n", read_buf);
+				printf("\n%s\n", area); //doc tu vung memory map
 				break;
 			case '3':
-				close(fd);
 				exit(1);
 				break;
 			default:
@@ -53,5 +55,4 @@ int main()
 				break;
 		}
 	}
-	close(fd);
 }

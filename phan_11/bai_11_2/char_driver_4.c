@@ -8,6 +8,7 @@
 #include<linux/cdev.h> /* thu vien cho cau truc cdev */
 #include<linux/slab.h> /* thu vien chua ham kmalloc */
 #include<linux/uaccess.h> /* thu vien chua cac ham trao doi du lieu giua user va kernel */
+#include<linux/mm.h> /* thu vien chua ham remap_pfn_range */
 
 #define DRIVER_AUTHOR "Nguyen Tien Dat <dat.a3cbq91@gmail.com>"
 #define DRIVER_DESC   "A simple example about character driver"
@@ -23,6 +24,12 @@ static int example_open(struct inode *inode, struct file *filp);
 static int example_release(struct inode *inode, struct file *filp);
 static ssize_t example_read(struct file *filp, char __user *user_buf, size_t len, loff_t * off);
 static ssize_t example_write(struct file *filp, const char *user_buf, size_t len, loff_t * off);
+static int example_mmap(struct file *file, struct vm_area_struct *vma) {
+        printk("Handle memory map\n");
+        if(remap_pfn_range (vma, vma->vm_start, vma->vm_pgoff, vma->vm_end - vma->vm_start, vma->vm_page_prot))
+                return -EAGAIN;
+        return 0;
+}
  
 static struct file_operations fops =
 {
@@ -31,6 +38,7 @@ static struct file_operations fops =
 	.write          = example_write,
 	.open           = example_open,
 	.release        = example_release,
+	.mmap           = example_mmap,
 };
 
 static int example_open(struct inode *inode, struct file *filp)
