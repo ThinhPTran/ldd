@@ -53,10 +53,10 @@ static void vb_handle_request(struct request_queue *q)
 
 		buffer = bio_data(rq->bio);
 		if(direction == READ) {
-			printk("read %ud sectors, start from sector %d\n", num_sectors, begin_sector);
+			printk("read %u sectors, start from sector %u\n", num_sectors, begin_sector);
 			vblock_dev_read(begin_sector, buffer, num_sectors);
 		} else {
-			printk("write %s to %ud sectors, start from sector %ud\n", buffer, num_sectors, begin_sector);
+			printk("write %u sectors, start from sector %u\n", num_sectors, begin_sector);
 			vblock_dev_write(begin_sector, buffer, num_sectors);
 		}
 done:
