@@ -18,7 +18,7 @@ int vnet_release(struct net_device *dev)
 
 int vnet_xmit(struct sk_buff *skb, struct net_device *dev)
 {
-	printk("dummy xmit function called...\n");
+	printk("vnet_xmit called...\n");
 	return 0;
 }
 int vnet_init(struct net_device *dev)
@@ -27,7 +27,7 @@ int vnet_init(struct net_device *dev)
 	return 0;
 };
 
-const struct net_device_ops my_netdev_ops = {
+const struct net_device_ops vnetdev_ops = {
 	.ndo_init = vnet_init,
 	.ndo_open = vnet_open,
 	.ndo_stop = vnet_release,
@@ -36,7 +36,7 @@ const struct net_device_ops my_netdev_ops = {
 
 static void virtual_setup(struct net_device *dev)
 {
-	dev->netdev_ops = &my_netdev_ops;
+	dev->netdev_ops = &vnetdev_ops;
 }
 
 int vnet_init_module(void)
@@ -51,14 +51,14 @@ int vnet_init_module(void)
 	return 0;
 }
 
-void vnet_cleanup (void)
+void vnet_exit_module (void)
 {
-	printk ("Cleaning Up the net driver\n");
 	unregister_netdev (vnet);
+	printk ("vnet driver exited\n");
 }
 
 module_init(vnet_init_module);
-module_exit(vnet_cleanup);
+module_exit(vnet_exit_module);
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Nguyen Tien Dat <dat.a3cbq91@gmail.com>");
